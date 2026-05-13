@@ -1,0 +1,15 @@
+FROM eclipse-temurin:25-jdk-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache maven
+
+COPY pom.xml .
+COPY api-gateway/pom.xml api-gateway/pom.xml
+COPY api-gateway/src api-gateway/src
+
+WORKDIR /app/api-gateway
+
+EXPOSE 8080
+
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false"]

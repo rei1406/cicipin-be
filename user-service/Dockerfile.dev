@@ -1,0 +1,15 @@
+FROM eclipse-temurin:25-jdk-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache maven
+
+COPY pom.xml .
+COPY user-service/pom.xml user-service/pom.xml
+COPY user-service/src user-service/src
+
+WORKDIR /app/user-service
+
+EXPOSE 8081
+
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false"]

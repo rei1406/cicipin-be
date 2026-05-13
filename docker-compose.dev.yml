@@ -1,0 +1,59 @@
+services:
+  user-service-db:
+    image: postgres:18.3-alpine
+    container_name: cicipin-user-service-db
+    environment:
+      POSTGRES_USER: cicipin
+      POSTGRES_PASSWORD: cicipin123
+      POSTGRES_DB: user_service
+    ports:
+      - "9876:5432"
+    volumes:
+      - cicipin-user-service-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cicipin -d user_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile.dev
+    container_name: cicipin-user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      user-service-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cicipin-user-service-db:5432/user_service
+      SPRING_DATASOURCE_USERNAME: cicipin
+      SPRING_DATASOURCE_PASSWORD: cicipin123
+      SPRING_PROFILES_ACTIVE: dev
+    volumes:
+      - ./user-service/src:/app/user-service/src
+      - ./user-service/pom.xml:/app/user-service/pom.xml
+      - ./pom.xml:/app/pom.xml
+      - cicipin-maven-cache:/root/.m2
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile.dev
+    container_name: cicipin-api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    volumes:
+      - ./api-gateway/src:/app/api-gateway/src
+      - ./api-gateway/pom.xml:/app/api-gateway/pom.xml
+      - ./pom.xml:/app/pom.xml
+      - cicipin-maven-cache:/root/.m2
+
+volumes:
+  cicipin-user-service-db-data:
+  cicipin-maven-cache:

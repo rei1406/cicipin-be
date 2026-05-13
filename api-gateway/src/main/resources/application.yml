@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: user-service
+              uri: http://user-service:8081
+              predicates:
+                - Path=/user/**
+              filters:
+                - StripPrefix=0
+            - id: user-service-health
+              uri: http://user-service:8081
+              predicates:
+                - Path=/health
+              filters:
+                - StripPrefix=0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
