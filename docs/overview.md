@@ -26,9 +26,19 @@ Client
 │  PostgreSQL DB       │  :7001
 │ cicipin-user-svc-db  │
 └─────────────────────┘
+
+Internal service-to-service (not via gateway):
+
+┌─────────────────────┐        ┌─────────────────────┐
+│    User Service      │──HTTP─▶│   Email Service      │  :8082
+│ cicipin-user-service │        │ cicipin-email-service│
+└─────────────────────┘        └─────────────────────┘
+                                         │  SMTP
+                                         ▼
+                                   Gmail / SMTP
 ```
 
-All client requests go through the API Gateway. The gateway routes them to the appropriate downstream service based on path predicates. There is no service-to-service communication yet.
+All client requests go through the API Gateway. The email service is internal — it is only reachable by other services inside the Docker network, not by external clients.
 
 ## Tech Stack
 
@@ -45,6 +55,7 @@ All client requests go through the API Gateway. The gateway routes them to the a
 | Build | Maven (multi-module) |
 | Containerization | Docker + Docker Compose |
 | Boilerplate reduction | Lombok |
+| Email delivery | Spring Mail + Thymeleaf (Gmail SMTP) |
 
 ## Module Structure
 
@@ -52,11 +63,13 @@ All client requests go through the API Gateway. The gateway routes them to the a
 cicipin/                    ← Maven parent (pom.xml)
 ├── api-gateway/            ← Spring Cloud Gateway module
 ├── user-service/           ← User & auth management module
+├── email-service/          ← Internal email delivery module
 ├── docker-compose.yml      ← Production compose
 ├── docker-compose.dev.yml  ← Development compose (hot-reload)
 ├── dev.sh                  ← Shortcut: runs docker-compose.dev.yml
-├── .env                    ← Production environment variables
-├── .env.dev                ← Development environment variables
+├── .env                    ← Production environment variables (git-ignored)
+├── .env.dev                ← Development environment variables (git-ignored)
+├── .env.example            ← Template with dummy values — copy to .env / .env.dev
 └── docs/                   ← This documentation folder
 ```
 
@@ -82,6 +95,7 @@ The platform supports four user roles:
 | User entity & JPA repository | ✅ Complete |
 | Custom API versioning infrastructure | ✅ Complete |
 | Health check endpoints | ✅ Complete |
+| Email service (OTP, welcome, password-reset, generic) | ✅ Complete |
 | Auth endpoints (register, login, etc.) | 🚧 Scaffolded — TODO |
 | User CRUD endpoints | 🚧 Scaffolded — TODO |
 | JWT / Spring Security | ❌ Not started |

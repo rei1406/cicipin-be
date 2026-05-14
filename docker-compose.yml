@@ -38,6 +38,26 @@ services:
       SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_DB_PASSWORD}
 
+  email-service:
+    build:
+      context: .
+      dockerfile: email-service/Dockerfile
+      args:
+        EMAIL_SERVICE_CONTAINER_PORT: ${EMAIL_SERVICE_CONTAINER_PORT}
+    container_name: cicipin-email-service
+    env_file:
+      - .env
+    ports:
+      - "${EMAIL_SERVICE_HOST_PORT}:${EMAIL_SERVICE_CONTAINER_PORT}"
+    environment:
+      EMAIL_SERVICE_CONTAINER_PORT: ${EMAIL_SERVICE_CONTAINER_PORT}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      APP_NAME: ${APP_NAME}
+
   api-gateway:
     build:
       context: .
@@ -51,6 +71,7 @@ services:
       - "${API_GATEWAY_HOST_PORT}:${API_GATEWAY_CONTAINER_PORT}"
     depends_on:
       - user-service
+      - email-service
 
 volumes:
   cicipin-user-service-db-data:

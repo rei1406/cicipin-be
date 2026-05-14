@@ -44,6 +44,32 @@ services:
       - ./pom.xml:/app/pom.xml
       - cicipin-maven-cache:/root/.m2
 
+  email-service:
+    build:
+      context: .
+      dockerfile: email-service/Dockerfile.dev
+      args:
+        EMAIL_SERVICE_CONTAINER_PORT: ${EMAIL_SERVICE_CONTAINER_PORT}
+    container_name: cicipin-email-service
+    env_file:
+      - .env.dev
+    ports:
+      - "${EMAIL_SERVICE_HOST_PORT}:${EMAIL_SERVICE_CONTAINER_PORT}"
+    environment:
+      EMAIL_SERVICE_CONTAINER_PORT: ${EMAIL_SERVICE_CONTAINER_PORT}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      APP_NAME: ${APP_NAME}
+      SPRING_PROFILES_ACTIVE: dev
+    volumes:
+      - ./email-service/src:/app/email-service/src
+      - ./email-service/pom.xml:/app/email-service/pom.xml
+      - ./pom.xml:/app/pom.xml
+      - cicipin-maven-cache:/root/.m2
+
   api-gateway:
     build:
       context: .
@@ -57,6 +83,7 @@ services:
       - "${API_GATEWAY_HOST_PORT}:${API_GATEWAY_CONTAINER_PORT}"
     depends_on:
       - user-service
+      - email-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
     volumes:

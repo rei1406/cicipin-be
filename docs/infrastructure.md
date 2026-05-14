@@ -15,14 +15,15 @@ The project ships two compose files:
 |---|---|---|---|
 | `cicipin-user-service-db` | `postgres:18.3-alpine` | `7001:7001` | — |
 | `cicipin-user-service` | Built from `user-service/Dockerfile[.dev]` | `8081:8081` | `user-service-db` (healthy) |
-| `cicipin-api-gateway` | Built from `api-gateway/Dockerfile[.dev]` | `8080:8080` | `user-service` |
+| `cicipin-email-service` | Built from `email-service/Dockerfile[.dev]` | `8082:8082` | — |
+| `cicipin-api-gateway` | Built from `api-gateway/Dockerfile[.dev]` | `8080:8080` | `user-service`, `email-service` |
 
 ### Volumes
 
 | Volume | Used By | Purpose |
 |---|---|---|
 | `cicipin-user-service-db-data` | `user-service-db` | Persists PostgreSQL data |
-| `cicipin-maven-cache` | Both services (dev only) | Caches Maven dependencies across rebuilds |
+| `cicipin-maven-cache` | All services (dev only) | Caches Maven dependencies across rebuilds |
 
 ### Health Check
 
@@ -36,12 +37,14 @@ Interval: 10s, timeout: 5s, retries: 5. The `user-service` container only starts
 
 ## Environment Variables
 
-### Production (`.env`)
+### Production (`.env`) / Development (`.env.dev`)
+
+Copy `.env.example` to `.env` and `.env.dev` and fill in real values. Never commit either file.
 
 | Variable | Example Value | Description |
 |---|---|---|
 | `USER_SERVICE_DB_USER` | `cicipin` | PostgreSQL username |
-| `USER_SERVICE_DB_PASSWORD` | `c1c1p1n123#` | PostgreSQL password |
+| `USER_SERVICE_DB_PASSWORD` | `change_me` | PostgreSQL password |
 | `USER_SERVICE_DB_NAME` | `user_db` | Database name |
 | `USER_SERVICE_DB_HOST_PORT` | `7001` | DB port exposed on host |
 | `USER_SERVICE_DB_CONTAINER_PORT` | `7001` | DB port inside container (also `PGPORT`) |
@@ -49,10 +52,18 @@ Interval: 10s, timeout: 5s, retries: 5. The `user-service` container only starts
 | `USER_SERVICE_CONTAINER_PORT` | `8081` | User service port inside container |
 | `API_GATEWAY_HOST_PORT` | `8080` | Gateway port on host |
 | `API_GATEWAY_CONTAINER_PORT` | `8080` | Gateway port inside container |
+| `EMAIL_SERVICE_HOST_PORT` | `8082` | Email service port on host |
+| `EMAIL_SERVICE_CONTAINER_PORT` | `8082` | Email service port inside container |
+| `MAIL_HOST` | `smtp.gmail.com` | SMTP server hostname |
+| `MAIL_PORT` | `587` | SMTP port (STARTTLS) |
+| `MAIL_USERNAME` | `your-email@gmail.com` | SMTP login / Gmail address |
+| `MAIL_PASSWORD` | `xxxx xxxx xxxx xxxx` | Gmail App Password (16 chars, not your account password) |
+| `MAIL_FROM` | `your-email@gmail.com` | Sender address shown in "From" field |
+| `APP_NAME` | `Cicipin` | Application name used in email templates |
 
 ### Development (`.env.dev`)
 
-Same variables as `.env` but may have different values for the dev environment. Also sets `SPRING_PROFILES_ACTIVE=dev` via the compose file.
+Same variables as `.env`. The compose file additionally injects `SPRING_PROFILES_ACTIVE=dev` for all services.
 
 ---
 
@@ -149,4 +160,37 @@ spring:
                 - Path=/user-service-health
               filters:
                 - StripPrefix=0
+            - id: email-service-health
+              uri: http://cicipin-email-service:${EMAIL_SERVICE_CONTAINER_PORT}
+              predicates:
+                - Path=/email-service-health
+              filters:
+                - StripPrefix=0
+```
+
+### Email Service (`application.yml`)
+
+```yaml
+server:
+  port: ${EMAIL_SERVICE_CONTAINER_PORT}
+
+spring:
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    from: ${MAIL_FROM}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: true   # set to false in dev profile if needed
+
+app:
+  name: ${APP_NAME:Cicipin}
 ```

@@ -24,10 +24,14 @@ Single entry point for all client traffic. Routes incoming HTTP requests to the 
 |---|---|---|---|
 | `user-service` | `/user/**` | `http://cicipin-user-service:8081` | Forwards full path (no prefix strip) |
 | `user-service-health` | `/user-service-health` | `http://cicipin-user-service:8081` | Direct health passthrough |
+| `email-service-health` | `/email-service-health` | `http://cicipin-email-service:8082` | Direct health passthrough |
+
+> ⚠️ The email service's `/api/email/**` endpoints are **not** exposed through the gateway — they are internal only, reachable only by other services inside the Docker network.
 
 ### Own Endpoints
 
 - `GET /actuator/health` — gateway's own health status
+- `GET /email-service-health` — proxied health passthrough to email-service
 
 ### Source Files
 
@@ -116,3 +120,146 @@ com.cicipin.userservice/
 - `DELETE /api/users/me` — 🚧 TODO
 - `GET /api/users/{id}` — 🚧 TODO (admin)
 - `GET /api/users/` — 🚧 TODO (admin)
+
+---
+
+## 3. Email Service
+
+**Module**: `email-service`  
+**Artifact**: `com.cicipin:email-service:1.0.0`  
+**Port**: 8082 (host + container)  
+**Entry point**: `com.cicipin.emailservice.EmailServiceApplication`
+
+### Purpose
+
+Handles all outbound email delivery for the platform. Other services call this service over HTTP (internal Docker network only). Renders HTML emails using Thymeleaf templates and delivers them via SMTP (Gmail by default).
+
+> This service is **not** exposed through the API Gateway. It is an internal service only.
+
+### Dependencies
+
+| Dependency | Purpose |
+|---|---|
+| `spring-boot-starter-web` | Spring MVC REST controllers |
+| `spring-boot-starter-mail` | JavaMailSender / SMTP integration |
+| `spring-boot-starter-thymeleaf` | HTML email template rendering |
+| `spring-boot-starter-validation` | Bean validation on request DTOs |
+| `spring-boot-starter-test` | JUnit 5 + Mockito (test scope) |
+| `lombok` | Boilerplate reduction (compile-time only) |
+
+### Package Structure
+
+```
+com.cicipin.emailservice/
+├── EmailServiceApplication.java
+├── controller/
+│   ├── EmailController.java         ← POST /api/email/send
+│   ├── HealthController.java        ← GET /email-service-health
+│   └── GlobalExceptionHandler.java  ← Validation & runtime error handling
+├── service/
+│   ├── EmailService.java            ← Interface
+│   └── EmailServiceImpl.java        ← Thymeleaf rendering + JavaMailSender
+└── dto/
+    ├── EmailType.java               ← Enum: OTP_VERIFICATION, WELCOME, PASSWORD_RESET, GENERIC
+    ├── SendEmailRequest.java        ← Polymorphic base (discriminated by "type" field)
+    ├── OtpEmailRequest.java         ← name, otpCode, expiryMinutes
+    ├── WelcomeEmailRequest.java     ← name
+    ├── PasswordResetEmailRequest.java ← name, resetCode, expiryMinutes
+    ├── GenericEmailRequest.java     ← subject, body (plain text)
+    └── SendEmailResponse.java       ← { success, message }
+```
+
+### Email Templates
+
+Located in `src/main/resources/templates/email/`:
+
+| Template file | Email type | Description |
+|---|---|---|
+| `otp-verification.html` | `OTP_VERIFICATION` | 6-digit OTP code for email verification |
+| `welcome.html` | `WELCOME` | Sent after successful email verification |
+| `password-reset.html` | `PASSWORD_RESET` | OTP code for password reset flow |
+
+Generic emails (`GENERIC` type) are sent as plain text without a template.
+
+### API
+
+#### `POST /api/email/send`
+
+Internal endpoint. The `type` field is the discriminator — it determines which subclass is deserialized and which template is used.
+
+**OTP Verification:**
+```json
+{
+  "type": "OTP_VERIFICATION",
+  "to": "user@example.com",
+  "name": "John Doe",
+  "otpCode": "482910",
+  "expiryMinutes": 5
+}
+```
+
+**Welcome:**
+```json
+{
+  "type": "WELCOME",
+  "to": "user@example.com",
+  "name": "John Doe"
+}
+```
+
+**Password Reset:**
+```json
+{
+  "type": "PASSWORD_RESET",
+  "to": "user@example.com",
+  "name": "John Doe",
+  "resetCode": "654321",
+  "expiryMinutes": 15
+}
+```
+
+**Generic:**
+```json
+{
+  "type": "GENERIC",
+  "to": "user@example.com",
+  "subject": "Your order is confirmed",
+  "body": "Plain text body here."
+}
+```
+
+**Response:**
+```json
+{ "success": true, "message": "Email sent successfully" }
+```
+
+#### `GET /email-service-health`
+
+Returns `{ "status": "UP", "service": "email-service", "message": "Service is running" }`.  
+Also proxied through the gateway at `GET /email-service-health`.
+
+### SMTP Configuration
+
+The service uses Gmail SMTP by default (`smtp.gmail.com:587`, STARTTLS). Configure via environment variables — see `.env.example` for all required keys.
+
+For Gmail, `MAIL_PASSWORD` must be a **16-character App Password** (not your regular account password). Generate one at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) after enabling 2-Step Verification.
+
+### Tests
+
+```
+src/test/java/com/cicipin/emailservice/service/
+├── EmailServiceImplTest.java        ← Unit tests (Mockito, no SMTP)
+└── EmailServiceIntegrationTest.java ← Integration tests (real SMTP, auto-skipped if MAIL_USERNAME unset)
+```
+
+Run inside the dev container:
+```bash
+# Unit tests only
+./dev.sh exec email-service mvn test -Dtest=EmailServiceImplTest
+
+# Integration tests (requires credentials in .env.dev)
+./dev.sh exec email-service mvn test -Dtest=EmailServiceIntegrationTest
+
+# All tests
+./dev.sh exec email-service mvn test
+```

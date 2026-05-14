@@ -21,6 +21,12 @@ spring:
                 - Path=/user-service-health
               filters:
                 - StripPrefix=0
+            - id: email-service-health
+              uri: http://cicipin-email-service:${EMAIL_SERVICE_CONTAINER_PORT}
+              predicates:
+                - Path=/email-service-health
+              filters:
+                - StripPrefix=0
 
 management:
   endpoints:
