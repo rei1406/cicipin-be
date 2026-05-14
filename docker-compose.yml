@@ -2,16 +2,19 @@ services:
   user-service-db:
     image: postgres:18.3-alpine
     container_name: cicipin-user-service-db
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: cicipin
-      POSTGRES_PASSWORD: cicipin123
-      POSTGRES_DB: user_service
+      POSTGRES_USER: ${USER_SERVICE_DB_USER}
+      POSTGRES_PASSWORD: ${USER_SERVICE_DB_PASSWORD}
+      POSTGRES_DB: ${USER_SERVICE_DB_NAME}
+      PGPORT: ${USER_SERVICE_DB_CONTAINER_PORT}
     ports:
-      - "9876:5432"
+      - "${USER_SERVICE_DB_HOST_PORT}:${USER_SERVICE_DB_CONTAINER_PORT}"
     volumes:
       - cicipin-user-service-db-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cicipin -d user_service"]
+      test: ["CMD-SHELL", "pg_isready -U ${USER_SERVICE_DB_USER} -d ${USER_SERVICE_DB_NAME} -p ${USER_SERVICE_DB_CONTAINER_PORT}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,24 +23,32 @@ services:
     build:
       context: .
       dockerfile: user-service/Dockerfile
+      args:
+        USER_SERVICE_CONTAINER_PORT: ${USER_SERVICE_CONTAINER_PORT}
     container_name: cicipin-user-service
+    env_file:
+      - .env
     ports:
-      - "8081:8081"
+      - "${USER_SERVICE_HOST_PORT}:${USER_SERVICE_CONTAINER_PORT}"
     depends_on:
       user-service-db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://cicipin-user-service-db:5432/user_service
-      SPRING_DATASOURCE_USERNAME: cicipin
-      SPRING_DATASOURCE_PASSWORD: cicipin123
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cicipin-user-service-db:${USER_SERVICE_DB_CONTAINER_PORT}/${USER_SERVICE_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${USER_SERVICE_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${USER_SERVICE_DB_PASSWORD}
 
   api-gateway:
     build:
       context: .
       dockerfile: api-gateway/Dockerfile
+      args:
+        API_GATEWAY_CONTAINER_PORT: ${API_GATEWAY_CONTAINER_PORT}
     container_name: cicipin-api-gateway
+    env_file:
+      - .env
     ports:
-      - "8080:8080"
+      - "${API_GATEWAY_HOST_PORT}:${API_GATEWAY_CONTAINER_PORT}"
     depends_on:
       - user-service
 

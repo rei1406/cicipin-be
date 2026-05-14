@@ -10,6 +10,7 @@ COPY api-gateway/src api-gateway/src
 
 WORKDIR /app/api-gateway
 
-EXPOSE 8080
+ARG API_GATEWAY_CONTAINER_PORT
+EXPOSE ${API_GATEWAY_CONTAINER_PORT}
 
 CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false"]

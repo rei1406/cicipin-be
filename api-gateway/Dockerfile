@@ -11,6 +11,7 @@ FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 COPY --from=builder /app/api-gateway/target/*.jar app.jar
 
-EXPOSE 8080
+ARG API_GATEWAY_CONTAINER_PORT
+EXPOSE ${API_GATEWAY_CONTAINER_PORT}
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

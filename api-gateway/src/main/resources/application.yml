@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${API_GATEWAY_CONTAINER_PORT}
 
 spring:
   application:
@@ -10,15 +10,15 @@ spring:
         webflux:
           routes:
             - id: user-service
-              uri: http://user-service:8081
+              uri: http://cicipin-user-service:${USER_SERVICE_CONTAINER_PORT}
               predicates:
                 - Path=/user/**
               filters:
                 - StripPrefix=0
             - id: user-service-health
-              uri: http://user-service:8081
+              uri: http://cicipin-user-service:${USER_SERVICE_CONTAINER_PORT}
               predicates:
-                - Path=/health
+                - Path=/user-service-health
               filters:
                 - StripPrefix=0
 

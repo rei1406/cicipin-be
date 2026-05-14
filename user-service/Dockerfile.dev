@@ -10,6 +10,7 @@ COPY user-service/src user-service/src
 
 WORKDIR /app/user-service
 
-EXPOSE 8081
+ARG USER_SERVICE_CONTAINER_PORT
+EXPOSE ${USER_SERVICE_CONTAINER_PORT}
 
-CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false"]
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false", "-Dspring-boot.run.addResources=true"]
