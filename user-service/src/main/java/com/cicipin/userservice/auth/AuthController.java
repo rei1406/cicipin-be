@@ -1,9 +1,11 @@
 package com.cicipin.userservice.auth;
 
+import com.cicipin.userservice.common.versioning.ApiVersion;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@ApiVersion(1)
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
