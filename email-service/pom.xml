@@ -11,6 +11,13 @@
 
     <name>Email Service</name>
 
+    <properties>
+        <!-- Default: exclude gmail tests. Override with -Dsurefire.excludedGroups= to clear. -->
+        <surefire.excludedGroups>gmail</surefire.excludedGroups>
+        <!-- Default: run all groups. Override with -Dsurefire.groups=gmail to target gmail only. -->
+        <surefire.groups></surefire.groups>
+    </properties>
+
     <parent>
         <groupId>com.cicipin</groupId>
         <artifactId>cicipin</artifactId>
@@ -49,6 +56,24 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                        Exclude the "gmail" tag from the default test run.
+                        To run Gmail tests explicitly, clear excludedGroups and set groups:
+                          mvn test -Dsurefire.excludedGroups= -Dsurefire.groups=gmail
+                        Or via docker exec:
+                          docker compose -f docker-compose.dev.yml exec email-service \
+                            mvn test -Dsurefire.excludedGroups= -Dsurefire.groups=gmail
+
+                        Both flags are needed: -Dgroups alone does NOT override excludedGroups.
+                    -->
+                    <excludedGroups>${surefire.excludedGroups}</excludedGroups>
+                    <groups>${surefire.groups}</groups>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

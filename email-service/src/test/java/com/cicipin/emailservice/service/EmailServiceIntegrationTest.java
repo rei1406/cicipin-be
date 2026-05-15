@@ -3,6 +3,7 @@ package com.cicipin.emailservice.service;
 import com.cicipin.emailservice.dto.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,14 +20,17 @@ import org.springframework.test.context.TestPropertySource;
  * To run inside the running dev container:
  *
  *   ./dev.sh up -d --build
- *   ./dev.sh exec email-service mvn -pl email-service -am test -Dtest=EmailServiceIntegrationTest
+ *   ./dev.sh exec email-service mvn test -Dsurefire.excludedGroups= -Dsurefire.groups=gmail
  *
  * Or via plain docker compose:
  *
  *   docker compose -f docker-compose.dev.yml exec email-service \
- *     mvn test -Dtest=EmailServiceIntegrationTest
+ *     mvn test -Dsurefire.excludedGroups= -Dsurefire.groups=gmail
+ *
+ * This test is tagged "gmail" and excluded from the default mvn test run.
  */
 @SpringBootTest
+@Tag("gmail")
 @TestPropertySource(properties = {
     "server.port=${EMAIL_SERVICE_CONTAINER_PORT:8082}",
     "spring.mail.host=${MAIL_HOST:smtp.gmail.com}",

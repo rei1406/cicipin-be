@@ -249,17 +249,36 @@ For Gmail, `MAIL_PASSWORD` must be a **16-character App Password** (not your reg
 ```
 src/test/java/com/cicipin/emailservice/service/
 ├── EmailServiceImplTest.java        ← Unit tests (Mockito, no SMTP)
-└── EmailServiceIntegrationTest.java ← Integration tests (real SMTP, auto-skipped if MAIL_USERNAME unset)
+├── EmailServiceMailpitTest.java     ← Integration tests against Mailpit mail catcher (runs by default)
+└── EmailServiceIntegrationTest.java ← Integration tests against real Gmail SMTP (excluded by default, tagged "gmail")
 ```
 
-Run inside the dev container:
+#### Mailpit tests (default)
+
+Mailpit is a mail catcher included in `docker-compose.dev.yml`. It accepts SMTP on port 1025 and exposes a REST API on port 8025 that the tests use to assert on captured messages — subject, recipient, body content, etc.
+
 ```bash
-# Unit tests only
-./dev.sh exec email-service mvn test -Dtest=EmailServiceImplTest
-
-# Integration tests (requires credentials in .env.dev)
-./dev.sh exec email-service mvn test -Dtest=EmailServiceIntegrationTest
-
-# All tests
+# Run all default tests (includes Mailpit, excludes Gmail)
 ./dev.sh exec email-service mvn test
+
+# Run Mailpit tests specifically
+./dev.sh exec email-service mvn test -Dtest=EmailServiceMailpitTest
+```
+
+Open `http://localhost:8025` in your browser to inspect captured emails visually while tests run.
+
+#### Gmail SMTP tests (opt-in)
+
+These tests send real emails via Gmail SMTP. They are tagged `gmail` and excluded from the default `mvn test` run. To run them, pass both `-Dsurefire.excludedGroups=` (to clear the exclusion) and `-Dsurefire.groups=gmail`:
+
+```bash
+./dev.sh exec email-service mvn test -Dsurefire.excludedGroups= -Dsurefire.groups=gmail
+```
+
+Requires `MAIL_USERNAME` and `MAIL_PASSWORD` to be set in `.env.dev`. The tests are also guarded by `@EnabledIfEnvironmentVariable` so they skip automatically if credentials are absent.
+
+#### Unit tests
+
+```bash
+./dev.sh exec email-service mvn test -Dtest=EmailServiceImplTest
 ```

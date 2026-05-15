@@ -44,6 +44,14 @@ services:
       - ./pom.xml:/app/pom.xml
       - cicipin-maven-cache:/root/.m2
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: cicipin-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI / REST API
+    restart: unless-stopped
+
   email-service:
     build:
       context: .
@@ -55,6 +63,8 @@ services:
       - .env.dev
     ports:
       - "${EMAIL_SERVICE_HOST_PORT}:${EMAIL_SERVICE_CONTAINER_PORT}"
+    depends_on:
+      - mailpit
     environment:
       EMAIL_SERVICE_CONTAINER_PORT: ${EMAIL_SERVICE_CONTAINER_PORT}
       MAIL_HOST: ${MAIL_HOST}
@@ -63,6 +73,9 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       MAIL_FROM: ${MAIL_FROM}
       APP_NAME: ${APP_NAME}
+      MAILPIT_SMTP_HOST: cicipin-mailpit
+      MAILPIT_SMTP_PORT: 1025
+      MAILPIT_API_URL: http://cicipin-mailpit:8025
       SPRING_PROFILES_ACTIVE: dev
     volumes:
       - ./email-service/src:/app/email-service/src

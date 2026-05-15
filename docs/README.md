@@ -13,6 +13,7 @@ This folder contains all technical documentation for the Cicipin backend project
 | [infrastructure.md](./infrastructure.md) | Docker Compose, Dockerfiles, environment variables |
 | [api-versioning.md](./api-versioning.md) | How the custom `X-API-Version` header versioning works |
 | [development-guide.md](./development-guide.md) | How to run, build, and extend the project locally |
+| [testing-guide.md](./testing-guide.md) | How to run tests (unit, Mailpit, Gmail SMTP) |
 | [llm-context.md](./llm-context.md) | Compact context file for LLMs — start here when working on this codebase |
 
 ## Quick Start
