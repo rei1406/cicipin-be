@@ -7,3 +7,26 @@
 .env.*
 !.env.example
 !.env.*.example
+
+# IDE - Eclipse
+**/.settings/
+**/.project
+**/.classpath
+bin/
+
+# IDE - VS Code
+.vscode/
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build output
+**/build/
+**/dist/
