@@ -109,6 +109,22 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: cicipin-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    env_file:
+      - .env.dev
+    ports:
+      - "${REDIS_HOST_PORT}:${REDIS_CONTAINER_PORT}"
+    volumes:
+      - cicipin-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api-gateway:
     build:
       context: .
@@ -135,3 +151,4 @@ volumes:
   cicipin-user-service-db-data:
   cicipin-kafka-data:
   cicipin-maven-cache:
+  cicipin-redis-data:
