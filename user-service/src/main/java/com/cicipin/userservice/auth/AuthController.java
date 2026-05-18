@@ -1,7 +1,6 @@
 package com.cicipin.userservice.auth;
 
-import com.cicipin.userservice.auth.dto.AuthResponse;
-import com.cicipin.userservice.auth.dto.RegisterRequest;
+import com.cicipin.userservice.auth.dto.*;
 import com.cicipin.userservice.common.versioning.ApiVersion;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +25,33 @@ public class AuthController {
         return authService.register(request);
     }
 
-    // TODO: POST /login
-    // TODO: POST /logout
-    // TODO: POST /refresh-token
-    // TODO: POST /verify-email
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
+    }
+
+    @PostMapping("/verify-email")
+    public AuthResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return authService.verifyEmail(request);
+    }
+
+    @PostMapping("/resend-otp")
+    public AuthResponse resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        return authService.resendOtp(request);
+    }
+
+    @PostMapping("/forgot-password")
+    public AuthResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPassword(request);
+    }
+
+    @PostMapping("/verify-otp")
+    public VerifyOtpResponse verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return authService.verifyOtp(request);
+    }
+
+    @PostMapping("/reset-password")
+    public AuthResponse resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return authService.resetPassword(request);
+    }
 }

@@ -1,14 +1,20 @@
 package com.cicipin.userservice.auth;
 
-import com.cicipin.userservice.auth.dto.AuthResponse;
-import com.cicipin.userservice.auth.dto.RegisterRequest;
+import com.cicipin.userservice.auth.dto.*;
 
 public interface AuthService {
 
     AuthResponse register(RegisterRequest request);
 
-    // TODO: login(LoginRequest request)
-    // TODO: logout(String token)
-    // TODO: refreshToken(String refreshToken)
-    // TODO: verifyEmail(String token)
+    AuthResponse login(LoginRequest request);
+
+    AuthResponse verifyEmail(VerifyEmailRequest request);
+
+    AuthResponse resendOtp(ResendOtpRequest request);
+
+    AuthResponse forgotPassword(ForgotPasswordRequest request);
+
+    VerifyOtpResponse verifyOtp(VerifyOtpRequest request);
+
+    AuthResponse resetPassword(ResetPasswordRequest request);
 }
