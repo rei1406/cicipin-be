@@ -5,10 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache maven
 
 COPY pom.xml .
-COPY api-gateway/pom.xml api-gateway/pom.xml
-COPY api-gateway/src api-gateway/src
-
-WORKDIR /app/api-gateway
+COPY src src
 
 ARG API_GATEWAY_CONTAINER_PORT
 EXPOSE ${API_GATEWAY_CONTAINER_PORT}

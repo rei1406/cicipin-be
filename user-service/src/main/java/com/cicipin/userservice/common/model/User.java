@@ -37,7 +37,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "user_role")
+    @Column(nullable = false, length = 50)
     private UserRole role;
 
     @Column(name = "is_verified", nullable = false)

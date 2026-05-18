@@ -12,6 +12,7 @@
     <name>Email Service</name>
 
     <properties>
+        <java.version>25</java.version>
         <!-- Default: exclude gmail tests. Override with -Dsurefire.excludedGroups= to clear. -->
         <surefire.excludedGroups>gmail</surefire.excludedGroups>
         <!-- Default: run all groups. Override with -Dsurefire.groups=gmail to target gmail only. -->
@@ -19,10 +20,10 @@
     </properties>
 
     <parent>
-        <groupId>com.cicipin</groupId>
-        <artifactId>cicipin</artifactId>
-        <version>1.0.0</version>
-        <relativePath>../pom.xml</relativePath>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.6</version>
+        <relativePath/>
     </parent>
 
     <dependencies>
@@ -46,6 +47,14 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

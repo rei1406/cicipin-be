@@ -21,8 +21,8 @@ services:
 
   user-service:
     build:
-      context: .
-      dockerfile: user-service/Dockerfile
+      context: ./user-service
+      dockerfile: Dockerfile
       args:
         USER_SERVICE_CONTAINER_PORT: ${USER_SERVICE_CONTAINER_PORT}
     container_name: cicipin-user-service
@@ -40,8 +40,8 @@ services:
 
   email-service:
     build:
-      context: .
-      dockerfile: email-service/Dockerfile
+      context: ./email-service
+      dockerfile: Dockerfile
       args:
         EMAIL_SERVICE_CONTAINER_PORT: ${EMAIL_SERVICE_CONTAINER_PORT}
     container_name: cicipin-email-service
@@ -102,8 +102,8 @@ services:
 
   api-gateway:
     build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
+      context: ./api-gateway
+      dockerfile: Dockerfile
       args:
         API_GATEWAY_CONTAINER_PORT: ${API_GATEWAY_CONTAINER_PORT}
     container_name: cicipin-api-gateway

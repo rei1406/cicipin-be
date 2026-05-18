@@ -5,8 +5,11 @@ import com.cicipin.userservice.auth.dto.RegisterRequest;
 import com.cicipin.userservice.auth.otp.OtpService;
 import com.cicipin.userservice.common.exception.DuplicateResourceException;
 import com.cicipin.userservice.common.model.User;
+import com.cicipin.userservice.kafka.UserEventProducer;
+import com.cicipin.userservice.kafka.UserRegisteredEvent;
 import com.cicipin.userservice.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,10 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
+    private final UserEventProducer userEventProducer;
+
+    @Value("${app.otp.expiry-minutes:15}")
+    private int expiryMinutes;
 
     @Override
     @Transactional
@@ -44,7 +51,10 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        otpService.generateOtp(user.getEmail());
+        String otpCode = otpService.generateOtp(user.getEmail());
+
+        userEventProducer.sendUserRegistered(
+                new UserRegisteredEvent(user.getEmail(), user.getUsername(), user.getName(), otpCode, expiryMinutes));
 
         return AuthResponse.builder()
                 .id(user.getId())

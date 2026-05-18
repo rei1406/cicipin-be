@@ -5,10 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache maven
 
 COPY pom.xml .
-COPY email-service/pom.xml email-service/pom.xml
-COPY email-service/src email-service/src
-
-WORKDIR /app/email-service
+COPY src src
 
 ARG EMAIL_SERVICE_CONTAINER_PORT
 EXPOSE ${EMAIL_SERVICE_CONTAINER_PORT}

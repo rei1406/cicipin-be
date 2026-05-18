@@ -5,10 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache maven
 
 COPY pom.xml .
-COPY user-service/pom.xml user-service/pom.xml
-COPY user-service/src user-service/src
-
-WORKDIR /app/user-service
+COPY src src
 
 ARG USER_SERVICE_CONTAINER_PORT
 EXPOSE ${USER_SERVICE_CONTAINER_PORT}

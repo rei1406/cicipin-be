@@ -9,7 +9,19 @@ spring:
       server:
         webflux:
           routes:
-            - id: user-service
+            - id: user-service-auth
+              uri: http://cicipin-user-service:${USER_SERVICE_CONTAINER_PORT}
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - StripPrefix=0
+            - id: user-service-users
+              uri: http://cicipin-user-service:${USER_SERVICE_CONTAINER_PORT}
+              predicates:
+                - Path=/api/users/**
+              filters:
+                - StripPrefix=0
+            - id: user-service-internal
               uri: http://cicipin-user-service:${USER_SERVICE_CONTAINER_PORT}
               predicates:
                 - Path=/user/**
