@@ -10,4 +10,4 @@ COPY src src
 ARG USER_SERVICE_CONTAINER_PORT
 EXPOSE ${USER_SERVICE_CONTAINER_PORT}
 
-CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false", "-Dspring-boot.run.addResources=true"]
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.addResources=true"]

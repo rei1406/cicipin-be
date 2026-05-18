@@ -10,4 +10,4 @@ COPY src src
 ARG API_GATEWAY_CONTAINER_PORT
 EXPOSE ${API_GATEWAY_CONTAINER_PORT}
 
-CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.fork=false"]
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.addResources=true"]
