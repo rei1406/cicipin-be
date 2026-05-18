@@ -86,7 +86,6 @@ class AuthServiceImplTest {
             assertThat(response.getName()).isEqualTo("John Doe");
             assertThat(response.getEmail()).isEqualTo("john@example.com");
             assertThat(response.getRole()).isEqualTo(UserRole.CUSTOMER);
-            assertThat(response.getMessage()).contains("Registration successful");
 
             User savedUser = userCaptor.getValue();
             assertThat(savedUser.getUsername()).isEqualTo("johndoe");

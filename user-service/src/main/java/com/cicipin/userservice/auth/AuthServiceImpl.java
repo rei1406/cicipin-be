@@ -5,6 +5,8 @@ import com.cicipin.userservice.auth.otp.OtpService;
 import com.cicipin.userservice.common.exception.BadRequestException;
 import com.cicipin.userservice.common.exception.DuplicateResourceException;
 import com.cicipin.userservice.common.exception.ResourceNotFoundException;
+import com.cicipin.userservice.common.exception.ForbiddenException;
+import com.cicipin.userservice.common.exception.UnauthorizedException;
 import com.cicipin.userservice.common.model.User;
 import com.cicipin.userservice.kafka.*;
 import com.cicipin.userservice.user.UserRepository;
@@ -70,25 +72,24 @@ public class AuthServiceImpl implements AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .message("Registration successful. Please check your email for verification.")
                 .build();
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadRequestException("Invalid email or password"));
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadRequestException("Invalid email or password");
+            throw new UnauthorizedException("Invalid email or password");
         }
 
         if (!user.isVerified()) {
-            throw new BadRequestException("Email not verified. Please verify your email first.");
+            throw new ForbiddenException("Email not verified. Please verify your email first.");
         }
 
         if (!user.isActive()) {
-            throw new BadRequestException("Account is deactivated. Contact support.");
+            throw new ForbiddenException("Account is deactivated. Contact support.");
         }
 
         return AuthResponse.builder()
@@ -97,7 +98,6 @@ public class AuthServiceImpl implements AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .message("Login successful.")
                 .build();
     }
 
@@ -135,7 +135,6 @@ public class AuthServiceImpl implements AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .message("Email verified successfully.")
                 .build();
     }
 
@@ -155,9 +154,7 @@ public class AuthServiceImpl implements AuthService {
         userEventProducer.sendUserResendOtp(
                 new UserResendOtpEvent(user.getEmail(), user.getUsername(), user.getName(), otpCode, expiryMinutes));
 
-        return AuthResponse.builder()
-                .message("OTP resent successfully. Please check your email.")
-                .build();
+        return AuthResponse.builder().build();
     }
 
     @Override
@@ -171,9 +168,7 @@ public class AuthServiceImpl implements AuthService {
         userEventProducer.sendUserForgotPassword(
                 new UserForgotPasswordEvent(user.getEmail(), user.getUsername(), user.getName(), otpCode, expiryMinutes));
 
-        return AuthResponse.builder()
-                .message("Password reset OTP sent. Please check your email.")
-                .build();
+        return AuthResponse.builder().build();
     }
 
     @Override
@@ -191,7 +186,6 @@ public class AuthServiceImpl implements AuthService {
 
         return VerifyOtpResponse.builder()
                 .token(token)
-                .message("OTP verified. Use the token to reset your password.")
                 .build();
     }
 
@@ -213,8 +207,6 @@ public class AuthServiceImpl implements AuthService {
 
         redisTemplate.delete(key);
 
-        return AuthResponse.builder()
-                .message("Password reset successful.")
-                .build();
+        return AuthResponse.builder().build();
     }
 }

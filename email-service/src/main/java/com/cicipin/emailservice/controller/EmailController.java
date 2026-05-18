@@ -1,11 +1,12 @@
 package com.cicipin.emailservice.controller;
 
+import com.cicipin.emailservice.dto.ApiResponse;
 import com.cicipin.emailservice.dto.SendEmailRequest;
-import com.cicipin.emailservice.dto.SendEmailResponse;
 import com.cicipin.emailservice.service.EmailService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,14 +32,11 @@ public class EmailController {
     private final EmailService emailService;
 
     @PostMapping("/send")
-    public ResponseEntity<SendEmailResponse> send(@Valid @RequestBody SendEmailRequest request) {
+    public ResponseEntity<ApiResponse<Void>> send(@Valid @RequestBody SendEmailRequest request) {
         log.info("Received email send request: type={}, to={}", request.getType(), request.getTo());
         emailService.send(request);
         return ResponseEntity.ok(
-            SendEmailResponse.builder()
-                .success(true)
-                .message("Email sent successfully")
-                .build()
+                ApiResponse.success(HttpStatus.OK, null, "Email sent successfully")
         );
     }
 }
