@@ -17,23 +17,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "Username can only contain letters, numbers, dots, hyphens, and underscores")
+    @NotBlank(message = "{auth.register.username.required}")
+    @Size(min = 3, max = 50, message = "{auth.register.username.size}")
+    @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "{auth.register.username.pattern}")
     private String username;
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
+    @NotBlank(message = "{auth.register.name.required}")
+    @Size(max = 100, message = "{auth.register.name.size}")
     private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "{auth.register.email.required}")
+    @Email(message = "{auth.register.email.invalid}")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 255, message = "Password must be between 8 and 255 characters")
+    @NotBlank(message = "{auth.register.password.required}")
+    @Size(min = 8, max = 255, message = "{auth.register.password.size}")
     private String password;
 
-    @NotNull(message = "Role is required")
+    @NotNull(message = "{auth.register.role.required}")
     private UserRole role;
 }

@@ -24,7 +24,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public UserResponse getCurrentUser(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", "error.user.not.found"));
         return toResponse(user);
     }
 
@@ -40,11 +40,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse createAdmin(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already registered");
+            throw new DuplicateResourceException("Email already registered", "error.user.duplicate.email");
         }
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Username already taken");
+            throw new DuplicateResourceException("Username already taken", "error.user.duplicate.username");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());

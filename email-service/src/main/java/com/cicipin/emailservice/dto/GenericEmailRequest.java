@@ -12,9 +12,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class GenericEmailRequest extends SendEmailRequest {
 
-    @NotBlank(message = "Subject must not be blank")
+    @NotBlank(message = "{email.generic.subject.required}")
     private String subject;
 
-    @NotBlank(message = "Body must not be blank")
+    @NotBlank(message = "{email.generic.body.required}")
     private String body;
 }

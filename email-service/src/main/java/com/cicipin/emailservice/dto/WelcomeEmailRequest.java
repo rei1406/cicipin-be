@@ -12,6 +12,6 @@ import lombok.EqualsAndHashCode;
 public class WelcomeEmailRequest extends SendEmailRequest {
 
     /** The recipient's display name shown in the email body. */
-    @NotBlank(message = "Name must not be blank")
+    @NotBlank(message = "{email.welcome.name.required}")
     private String name;
 }

@@ -47,15 +47,15 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (request.getRole() == UserRole.ADMIN) {
-            throw new BadRequestException("Cannot register as ADMIN. Contact an existing admin to create an admin account.");
+            throw new BadRequestException("Cannot register as ADMIN. Contact an existing admin to create an admin account.", "error.auth.register.admin");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already registered");
+            throw new DuplicateResourceException("Email already registered", "error.auth.duplicate.email");
         }
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Username already taken");
+            throw new DuplicateResourceException("Username already taken", "error.auth.duplicate.username");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
@@ -92,31 +92,31 @@ public class AuthServiceImpl implements AuthService {
 
         String blockedKey = LOGIN_BLOCKED_PREFIX + identifier;
         if (Boolean.TRUE.equals(redisTemplate.hasKey(blockedKey))) {
-            throw new BadRequestException("Too many login attempts. Please try again in 10 minutes.");
+            throw new BadRequestException("Too many login attempts. Please try again in 10 minutes.", "error.auth.login.blocked");
         }
 
         User user;
         if (identifier.contains("@")) {
             user = userRepository.findByEmail(identifier)
-                    .orElseThrow(() -> new UnauthorizedException("User not registered"));
+                    .orElseThrow(() -> new UnauthorizedException("User not registered", "error.auth.login.not.registered"));
         } else {
             user = userRepository.findByUsername(identifier)
-                    .orElseThrow(() -> new UnauthorizedException("User not registered"));
+                    .orElseThrow(() -> new UnauthorizedException("User not registered", "error.auth.login.not.registered"));
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             recordLoginAttempt(identifier);
-            throw new UnauthorizedException("Password incorrect");
+            throw new UnauthorizedException("Password incorrect", "error.auth.login.wrong.password");
         }
 
         resetLoginAttempts(identifier);
 
         if (!user.isVerified()) {
-            throw new ForbiddenException("Email not verified. Please verify your email first.");
+            throw new ForbiddenException("Email not verified. Please verify your email first.", "error.auth.email.not.verified");
         }
 
         if (!user.isActive()) {
-            throw new ForbiddenException("Account is deactivated. Contact support.");
+            throw new ForbiddenException("Account is deactivated. Contact support.", "error.auth.account.deactivated");
         }
 
         String accessToken = jwtService.generateAccessToken(user);
@@ -153,20 +153,20 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail(), "error.auth.user.not.found", request.getEmail()));
 
         if (user.isVerified()) {
-            throw new BadRequestException("Email already verified");
+            throw new BadRequestException("Email already verified", "error.auth.email.verified");
         }
 
         if (!otpService.isVerifyAllowed(request.getEmail())) {
-            throw new BadRequestException("Too many verification attempts. Please try again in 5 minutes.");
+            throw new BadRequestException("Too many verification attempts. Please try again in 5 minutes.", "error.auth.verify.blocked");
         }
 
         boolean valid = otpService.verifyOtp(request.getEmail(), request.getOtp());
         if (!valid) {
             otpService.recordVerifyAttempt(request.getEmail());
-            throw new BadRequestException("Invalid or expired OTP");
+            throw new BadRequestException("Invalid or expired OTP", "error.auth.otp.invalid");
         }
 
         otpService.resetVerifyAttempts(request.getEmail());
@@ -193,7 +193,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
         if (!otpService.isResendAllowed(request.getEmail())) {
-            throw new BadRequestException("Resend OTP limit reached. Please try again in 1 hour.");
+            throw new BadRequestException("Resend OTP limit reached. Please try again in 1 hour.", "error.auth.resend.blocked");
         }
 
         otpService.recordResendAttempt(request.getEmail());
@@ -222,10 +222,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail(), "error.auth.user.not.found", request.getEmail()));
 
         if (!otpService.verifyOtp(request.getEmail(), request.getOtp())) {
-            throw new BadRequestException("Invalid or expired OTP");
+            throw new BadRequestException("Invalid or expired OTP", "error.auth.otp.invalid");
         }
 
         String token = UUID.randomUUID().toString();
@@ -243,11 +243,11 @@ public class AuthServiceImpl implements AuthService {
         String key = RESET_TOKEN_PREFIX + request.getToken();
         String email = redisTemplate.opsForValue().get(key);
         if (email == null) {
-            throw new BadRequestException("Invalid or expired token");
+            throw new BadRequestException("Invalid or expired token", "error.auth.token.invalid");
         }
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email, "error.auth.user.not.found", email));
 
         String hashedPassword = passwordEncoder.encode(request.getNewPassword());
         user.setPassword(hashedPassword);

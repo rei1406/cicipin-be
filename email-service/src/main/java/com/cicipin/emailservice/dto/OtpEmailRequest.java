@@ -13,17 +13,12 @@ import lombok.EqualsAndHashCode;
 public class OtpEmailRequest extends SendEmailRequest {
 
     /** The recipient's display name shown in the email body. */
-    @NotBlank(message = "Name must not be blank")
+    @NotBlank(message = "{email.otp.name.required}")
     private String name;
 
-    /** The 6-digit OTP code to include in the email. */
-    @NotBlank(message = "OTP code must not be blank")
+    @NotBlank(message = "{email.otp.code.required}")
     private String otpCode;
 
-    /**
-     * How many minutes the OTP is valid for.
-     * Shown in the email so the user knows the expiry window.
-     */
-    @Positive(message = "Expiry minutes must be a positive number")
+    @Positive(message = "{email.otp.expiry.positive}")
     private int expiryMinutes = 5;
 }

@@ -13,16 +13,12 @@ import lombok.EqualsAndHashCode;
 public class PasswordResetEmailRequest extends SendEmailRequest {
 
     /** The recipient's display name shown in the email body. */
-    @NotBlank(message = "Name must not be blank")
+    @NotBlank(message = "{email.reset.name.required}")
     private String name;
 
-    /** The OTP / reset code to include in the email. */
-    @NotBlank(message = "Reset code must not be blank")
+    @NotBlank(message = "{email.reset.code.required}")
     private String resetCode;
 
-    /**
-     * How many minutes the reset code is valid for.
-     */
-    @Positive(message = "Expiry minutes must be a positive number")
+    @Positive(message = "{email.reset.expiry.positive}")
     private int expiryMinutes = 15;
 }

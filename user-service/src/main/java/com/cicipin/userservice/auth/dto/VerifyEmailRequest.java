@@ -14,11 +14,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class VerifyEmailRequest {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "{auth.verify.email.required}")
+    @Email(message = "{auth.register.email.invalid}")
     private String email;
 
-    @NotBlank(message = "OTP is required")
-    @Size(min = 6, max = 6, message = "OTP must be 6 digits")
+    @NotBlank(message = "{auth.verify.otp.required}")
+    @Size(min = 6, max = 6, message = "{auth.verify.otp.size}")
     private String otp;
 }

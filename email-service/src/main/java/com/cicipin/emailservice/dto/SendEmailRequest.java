@@ -21,10 +21,10 @@ import lombok.Data;
 })
 public abstract class SendEmailRequest {
 
-    @NotBlank(message = "Recipient email must not be blank")
-    @Email(message = "Recipient email must be a valid email address")
+    @NotBlank(message = "{email.send.to.required}")
+    @Email(message = "{email.send.to.invalid}")
     private String to;
 
-    @NotNull(message = "Email type must not be null")
+    @NotNull(message = "{email.send.type.required}")
     private EmailType type;
 }

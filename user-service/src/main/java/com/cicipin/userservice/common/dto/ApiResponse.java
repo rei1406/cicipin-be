@@ -39,10 +39,10 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    public static <T> ApiResponse<T> validationError(Map<String, String> fieldErrors) {
+    public static <T> ApiResponse<T> validationError(Map<String, String> fieldErrors, String message) {
         return ApiResponse.<T>builder()
                 .success(false)
-                .message("Validation Failed")
+                .message(message)
                 .status(HttpStatus.UNPROCESSABLE_CONTENT.value())
                 .errors(fieldErrors)
                 .build();
