@@ -72,6 +72,13 @@ All ports and secrets come from env files — never hardcode them:
 - `.env.dev` — dev values (git-ignored)
 - **All three must stay synced** — same set of variable names in each
 
+## Seeding (user-service)
+Profile-based `CommandLineRunner` in `common/seed/SeedRunner.java` — seeds an admin user (`admin` / `admin123`) if none exists, then exits.
+```bash
+./dev.sh seed
+```
+This runs a one-off container with `SPRING_PROFILES_ACTIVE=seed`. Idempotent — skips if admin already exists.
+
 ## Testing
 ```bash
 ./dev.sh exec user-service mvn test
