@@ -29,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final OtpService otpService;
     private final UserEventProducer userEventProducer;
     private final StringRedisTemplate redisTemplate;
+    private final JwtService jwtService;
 
     private static final String RESET_TOKEN_PREFIX = "reset:token:";
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 5;
@@ -92,12 +93,16 @@ public class AuthServiceImpl implements AuthService {
             throw new ForbiddenException("Account is deactivated. Contact support.");
         }
 
+        String accessToken = jwtService.generateAccessToken(user);
+
         return AuthResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .accessToken(accessToken)
+                .tokenType("Bearer")
                 .build();
     }
 

@@ -1,11 +1,15 @@
 package com.cicipin.userservice.auth;
 
 import com.cicipin.userservice.auth.dto.AuthResponse;
+import com.cicipin.userservice.auth.dto.LoginRequest;
 import com.cicipin.userservice.auth.dto.RegisterRequest;
 import com.cicipin.userservice.auth.otp.OtpService;
 import com.cicipin.userservice.common.exception.DuplicateResourceException;
+import com.cicipin.userservice.common.exception.ForbiddenException;
+import com.cicipin.userservice.common.exception.UnauthorizedException;
 import com.cicipin.userservice.common.model.User;
 import com.cicipin.userservice.common.model.UserRole;
+import com.cicipin.userservice.kafka.UserEventProducer;
 import com.cicipin.userservice.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,8 +20,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +45,15 @@ class AuthServiceImplTest {
     @Mock
     private OtpService otpService;
 
+    @Mock
+    private UserEventProducer userEventProducer;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private JwtService jwtService;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -53,6 +68,135 @@ class AuthServiceImplTest {
                 .password("password123")
                 .role(UserRole.CUSTOMER)
                 .build();
+    }
+
+    @Nested
+    @DisplayName("login()")
+    class Login {
+
+        @Test
+        @DisplayName("should return AuthResponse with JWT token when credentials are valid")
+        void shouldReturnAuthResponseWithToken_whenCredentialsAreValid() {
+            UUID userId = UUID.randomUUID();
+            User user = User.builder()
+                    .id(userId)
+                    .username("johndoe")
+                    .name("John Doe")
+                    .email("john@example.com")
+                    .password("$2a$10$hashed")
+                    .role(UserRole.CUSTOMER)
+                    .isVerified(true)
+                    .isActive(true)
+                    .build();
+
+            when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("password123", user.getPassword())).thenReturn(true);
+            when(jwtService.generateAccessToken(user)).thenReturn("test-jwt-token");
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("john@example.com")
+                    .password("password123")
+                    .build();
+
+            AuthResponse response = authService.login(request);
+
+            assertThat(response).isNotNull();
+            assertThat(response.getId()).isEqualTo(userId);
+            assertThat(response.getUsername()).isEqualTo("johndoe");
+            assertThat(response.getAccessToken()).isEqualTo("test-jwt-token");
+            assertThat(response.getTokenType()).isEqualTo("Bearer");
+            verify(jwtService, times(1)).generateAccessToken(user);
+        }
+
+        @Test
+        @DisplayName("should throw UnauthorizedException when email is not found")
+        void shouldThrowException_whenEmailNotFound() {
+            when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("unknown@example.com")
+                    .password("password123")
+                    .build();
+
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessage("Invalid email or password");
+
+            verifyNoInteractions(jwtService);
+        }
+
+        @Test
+        @DisplayName("should throw UnauthorizedException when password is wrong")
+        void shouldThrowException_whenPasswordIsWrong() {
+            User user = User.builder()
+                    .email("john@example.com")
+                    .password("$2a$10$hashed")
+                    .build();
+
+            when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("wrongpassword", user.getPassword())).thenReturn(false);
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("john@example.com")
+                    .password("wrongpassword")
+                    .build();
+
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessage("Invalid email or password");
+
+            verifyNoInteractions(jwtService);
+        }
+
+        @Test
+        @DisplayName("should throw ForbiddenException when email is not verified")
+        void shouldThrowException_whenEmailNotVerified() {
+            User user = User.builder()
+                    .email("john@example.com")
+                    .password("$2a$10$hashed")
+                    .isVerified(false)
+                    .isActive(true)
+                    .build();
+
+            when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("password123", user.getPassword())).thenReturn(true);
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("john@example.com")
+                    .password("password123")
+                    .build();
+
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("Email not verified. Please verify your email first.");
+
+            verifyNoInteractions(jwtService);
+        }
+
+        @Test
+        @DisplayName("should throw ForbiddenException when account is inactive")
+        void shouldThrowException_whenAccountIsInactive() {
+            User user = User.builder()
+                    .email("john@example.com")
+                    .password("$2a$10$hashed")
+                    .isVerified(true)
+                    .isActive(false)
+                    .build();
+
+            when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("password123", user.getPassword())).thenReturn(true);
+
+            LoginRequest request = LoginRequest.builder()
+                    .email("john@example.com")
+                    .password("password123")
+                    .build();
+
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessage("Account is deactivated. Contact support.");
+
+            verifyNoInteractions(jwtService);
+        }
     }
 
     @Nested

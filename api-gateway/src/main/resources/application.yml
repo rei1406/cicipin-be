@@ -40,6 +40,10 @@ spring:
               filters:
                 - StripPrefix=0
 
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+
 management:
   endpoints:
     web:

@@ -1,10 +1,11 @@
 package com.cicipin.userservice.user;
 
+import java.util.List;
+import java.util.UUID;
+
 public interface UserService {
 
-    // TODO: getCurrentUser(UUID id)
-    // TODO: updateUser(UUID id, UpdateUserRequest request)
-    // TODO: deactivateUser(UUID id)
-    // TODO: getUserById(UUID id)
-    // TODO: getAllUsers()
+    UserResponse getCurrentUser(UUID id);
+
+    List<UserResponse> getAllUsers();
 }

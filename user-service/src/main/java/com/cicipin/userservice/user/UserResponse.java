@@ -1,4 +1,4 @@
-package com.cicipin.userservice.auth.dto;
+package com.cicipin.userservice.user;
 
 import com.cicipin.userservice.common.model.UserRole;
 import lombok.AllArgsConstructor;
@@ -12,13 +12,10 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-
+public class UserResponse {
     private UUID id;
     private String username;
     private String name;
     private String email;
     private UserRole role;
-    private String accessToken;
-    private String tokenType;
 }
