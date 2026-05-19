@@ -119,6 +119,122 @@ Three static factories are available: `ApiResponse.success(HttpStatus, T, String
 - Global exception handling via `@RestControllerAdvice` (`GlobalExceptionHandler`)
 - User entity fields: `id` (UUID), `username`, `name`, `email`, `password`, `role` (enum), `isVerified`, `isActive`, `photo`, timestamps
 
+## i18n / Internationalization
+
+Every service implements its own independent i18n setup — no shared/common i18n module.
+
+### Supported Locales
+- English (`en`, default) — `messages.properties`
+- Indonesian (`id`) — `messages_id.properties`
+
+### Locale Resolution
+The `X-Locale` request header drives locale selection. If absent, falls back to `Accept-Language` header, then to `Locale.ENGLISH`.
+
+Each service configures a custom `AcceptHeaderLocaleResolver` (via `WebMvcConfig` or `I18nConfig`):
+
+```java
+AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver() {
+    @Override
+    public Locale resolveLocale(HttpServletRequest request) {
+        String lang = request.getHeader("X-Locale");
+        if (lang != null && !lang.isEmpty()) {
+            return Locale.forLanguageTag(lang);
+        }
+        return super.resolveLocale(request);
+    }
+};
+resolver.setSupportedLocales(List.of(Locale.of("en"), Locale.of("id")));
+resolver.setDefaultLocale(Locale.ENGLISH);
+```
+
+The resolved locale is stored in `LocaleContextHolder` and accessed anywhere via `LocaleContextHolder.getLocale()`.
+
+### MessageSource Configuration
+- `MessageSource` bean with basename `"messages"`, UTF-8 encoding, no system locale fallback
+- `LocalValidatorFactoryBean` registered using this `MessageSource` for `@Valid` validation messages
+- Validation error codes in properties files match Spring's auto-generated codes (e.g. `auth.register.username.required` for `@NotBlank` on `RegisterRequest.username`)
+
+### Message Properties Files
+Each service has its own properties files under `src/main/resources/`:
+
+| File | Content |
+|---|---|
+| `messages.properties` | Default locale (English) |
+| `messages_id.properties` | Indonesian translations |
+
+Message key naming conventions:
+- `auth.*` — auth flow messages
+- `user.*` — user CRUD messages
+- `error.*` — error messages
+- `success.*` — success messages
+- `email.*` — email-related messages
+- Placeholders use `{0}`, `{1}` for argument substitution
+
+### How to Access Localized Messages
+
+**Controllers** — inject `MessageSource` and use a private `resolve()` helper:
+
+```java
+@RequiredArgsConstructor
+@RestController
+public class SomeController {
+    private final MessageSource messageSource;
+
+    private String resolve(String code) {
+        try {
+            return messageSource.getMessage(code, null, LocaleContextHolder.getLocale());
+        } catch (NoSuchMessageException e) {
+            return code;
+        }
+    }
+
+    public ResponseEntity<ApiResponse<?>> someEndpoint() {
+        return ApiResponse.success(HttpStatus.OK, data, resolve("success.some.code"));
+    }
+}
+```
+
+**GlobalExceptionHandler** — same injection pattern, with an overloaded `resolve` for args:
+
+```java
+private String resolve(String code, Object[] args, String fallback) {
+    try {
+        return messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
+    } catch (NoSuchMessageException e) {
+        return fallback;
+    }
+}
+```
+
+**Service layer** — does **not** use `MessageSource`. Services throw custom exceptions carrying a `messageCode` + optional `args`:
+
+```java
+throw new ResourceNotFoundException("User not found with email: " + email,
+    "error.auth.user.not.found", email);
+// The code "error.auth.user.not.found=User not found with email: {0}"
+// gets the email substituted for {0} in the GlobalExceptionHandler
+```
+
+Custom exceptions: `BadRequestException`, `DuplicateResourceException`, `ResourceNotFoundException`, `UnauthorizedException`, `ForbiddenException`. Each has a `getMessageCode()` and `getArgs()` method.
+
+### Adding a New Locale
+1. Create `messages_{locale}.properties` (e.g. `messages_ja.properties`) with all keys translated
+2. Add the locale to `setSupportedLocales(...)` in the locale resolver config
+3. Repeat for each service that needs the new locale
+
+### Files Implementing i18n (reference)
+
+| File | Purpose |
+|---|---|
+| `{service}/.../config/I18nConfig.java` | MessageSource + validator bean |
+| `{service}/.../config/WebMvcConfig.java` (or equivalent) | LocaleResolver (reads X-Locale) |
+| `{service}/.../controller/*.java` | Controllers using resolve() pattern |
+| `{service}/.../exception/GlobalExceptionHandler.java` | Resolves message codes from exceptions |
+| `{service}/src/main/resources/messages.properties` | English translations |
+| `{service}/src/main/resources/messages_id.properties` | Indonesian translations |
+
+**Note:** `api-gateway` is a reactive WebFlux app — it has no i18n. It passes `X-Locale` through to downstream services.
+
 ## Important Gotchas
 - **`docs/` is stale** — auth, JWT, Spring Security, Kafka, Redis OTP are all implemented, not TODO
 - No root `pom.xml` (despite docs claiming multi-module); each service is standalone
