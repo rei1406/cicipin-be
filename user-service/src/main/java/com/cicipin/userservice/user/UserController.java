@@ -1,11 +1,15 @@
 package com.cicipin.userservice.user;
 
+import com.cicipin.userservice.auth.dto.RegisterRequest;
 import com.cicipin.userservice.common.dto.ApiResponse;
 import com.cicipin.userservice.common.versioning.ApiVersion;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,5 +35,12 @@ public class UserController {
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
         List<UserResponse> users = userService.getAllUsers();
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK, users, "Users found"));
+    }
+
+    @PostMapping("/admin")
+    public ResponseEntity<ApiResponse<UserResponse>> createAdmin(@Valid @RequestBody RegisterRequest request) {
+        UserResponse user = userService.createAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(HttpStatus.CREATED, user, "Admin account created successfully."));
     }
 }

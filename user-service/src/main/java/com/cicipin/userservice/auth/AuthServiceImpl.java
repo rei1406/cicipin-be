@@ -8,6 +8,7 @@ import com.cicipin.userservice.common.exception.ResourceNotFoundException;
 import com.cicipin.userservice.common.exception.ForbiddenException;
 import com.cicipin.userservice.common.exception.UnauthorizedException;
 import com.cicipin.userservice.common.model.User;
+import com.cicipin.userservice.common.model.UserRole;
 import com.cicipin.userservice.kafka.*;
 import com.cicipin.userservice.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,12 +35,21 @@ public class AuthServiceImpl implements AuthService {
     private static final String RESET_TOKEN_PREFIX = "reset:token:";
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 5;
 
+    private static final String LOGIN_ATTEMPTS_PREFIX = "login:attempts:";
+    private static final String LOGIN_BLOCKED_PREFIX = "login:blocked:";
+    private static final int LOGIN_MAX_ATTEMPTS = 3;
+    private static final int LOGIN_BLOCK_MINUTES = 10;
+
     @Value("${app.otp.expiry-minutes:15}")
     private int expiryMinutes;
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (request.getRole() == UserRole.ADMIN) {
+            throw new BadRequestException("Cannot register as ADMIN. Contact an existing admin to create an admin account.");
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email already registered");
         }
@@ -78,12 +88,28 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+        String identifier = request.getUsernameOrEmail();
+
+        String blockedKey = LOGIN_BLOCKED_PREFIX + identifier;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(blockedKey))) {
+            throw new BadRequestException("Too many login attempts. Please try again in 10 minutes.");
+        }
+
+        User user;
+        if (identifier.contains("@")) {
+            user = userRepository.findByEmail(identifier)
+                    .orElseThrow(() -> new UnauthorizedException("User not registered"));
+        } else {
+            user = userRepository.findByUsername(identifier)
+                    .orElseThrow(() -> new UnauthorizedException("User not registered"));
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new UnauthorizedException("Invalid email or password");
+            recordLoginAttempt(identifier);
+            throw new UnauthorizedException("Password incorrect");
         }
+
+        resetLoginAttempts(identifier);
 
         if (!user.isVerified()) {
             throw new ForbiddenException("Email not verified. Please verify your email first.");
@@ -104,6 +130,23 @@ public class AuthServiceImpl implements AuthService {
                 .accessToken(accessToken)
                 .tokenType("Bearer")
                 .build();
+    }
+
+    private void recordLoginAttempt(String identifier) {
+        String attemptsKey = LOGIN_ATTEMPTS_PREFIX + identifier;
+        Long count = redisTemplate.opsForValue().increment(attemptsKey);
+        if (count != null && count == 1) {
+            redisTemplate.expire(attemptsKey, LOGIN_BLOCK_MINUTES, TimeUnit.MINUTES);
+        }
+        if (count != null && count >= LOGIN_MAX_ATTEMPTS) {
+            String blockedKey = LOGIN_BLOCKED_PREFIX + identifier;
+            redisTemplate.opsForValue().set(blockedKey, "1", LOGIN_BLOCK_MINUTES, TimeUnit.MINUTES);
+        }
+    }
+
+    private void resetLoginAttempts(String identifier) {
+        redisTemplate.delete(LOGIN_ATTEMPTS_PREFIX + identifier);
+        redisTemplate.delete(LOGIN_BLOCKED_PREFIX + identifier);
     }
 
     @Override

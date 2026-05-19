@@ -43,7 +43,7 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .success(false)
                 .message("Validation Failed")
-                .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
+                .status(HttpStatus.UNPROCESSABLE_CONTENT.value())
                 .errors(fieldErrors)
                 .build();
     }

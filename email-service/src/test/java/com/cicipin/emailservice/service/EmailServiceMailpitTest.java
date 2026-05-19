@@ -102,6 +102,11 @@ class EmailServiceMailpitTest {
             MAILPIT_API + "/api/v1/message/" + messageId, Map.class);
     }
 
+    @SuppressWarnings("unchecked")
+    private List<Map<String, String>> extractRecipients(Map<String, Object> detail) {
+        return (List<Map<String, String>>) detail.get("To");
+    }
+
     // -------------------------------------------------------------------------
     // Tests
     // -------------------------------------------------------------------------
@@ -125,7 +130,7 @@ class EmailServiceMailpitTest {
         Map<String, Object> detail = fetchMessageDetail(messageId);
 
         // Assert recipient
-        List<Map<String, String>> toList = (List<Map<String, String>>) detail.get("To");
+        List<Map<String, String>> toList = extractRecipients(detail);
         assertThat(toList).anyMatch(addr -> TARGET_EMAIL.equals(addr.get("Address")));
 
         // Assert subject matches what EmailServiceImpl sets
@@ -154,7 +159,7 @@ class EmailServiceMailpitTest {
         String messageId = (String) message.get("ID");
         Map<String, Object> detail = fetchMessageDetail(messageId);
 
-        List<Map<String, String>> toList = (List<Map<String, String>>) detail.get("To");
+        List<Map<String, String>> toList = extractRecipients(detail);
         assertThat(toList).anyMatch(addr -> TARGET_EMAIL.equals(addr.get("Address")));
 
         String subject = (String) detail.get("Subject");
@@ -179,7 +184,7 @@ class EmailServiceMailpitTest {
         String messageId = (String) message.get("ID");
         Map<String, Object> detail = fetchMessageDetail(messageId);
 
-        List<Map<String, String>> toList = (List<Map<String, String>>) detail.get("To");
+        List<Map<String, String>> toList = extractRecipients(detail);
         assertThat(toList).anyMatch(addr -> TARGET_EMAIL.equals(addr.get("Address")));
 
         String subject = (String) detail.get("Subject");
@@ -207,7 +212,7 @@ class EmailServiceMailpitTest {
         String messageId = (String) message.get("ID");
         Map<String, Object> detail = fetchMessageDetail(messageId);
 
-        List<Map<String, String>> toList = (List<Map<String, String>>) detail.get("To");
+        List<Map<String, String>> toList = extractRecipients(detail);
         assertThat(toList).anyMatch(addr -> TARGET_EMAIL.equals(addr.get("Address")));
 
         String subject = (String) detail.get("Subject");

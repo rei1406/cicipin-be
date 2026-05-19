@@ -1,17 +1,17 @@
 package com.cicipin.emailservice.controller;
 
-import com.cicipin.emailservice.dto.ApiResponse;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.cicipin.emailservice.dto.ApiResponse;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestControllerAdvice
@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
                 fieldErrors.put(err.getField(), err.getDefaultMessage())
         );
         log.warn("Validation failed: {}", fieldErrors);
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(ApiResponse.validationError(fieldErrors));
     }
 

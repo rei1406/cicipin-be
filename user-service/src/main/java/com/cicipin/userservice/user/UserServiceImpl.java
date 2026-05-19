@@ -1,8 +1,12 @@
 package com.cicipin.userservice.user;
 
+import com.cicipin.userservice.auth.dto.RegisterRequest;
+import com.cicipin.userservice.common.exception.DuplicateResourceException;
 import com.cicipin.userservice.common.exception.ResourceNotFoundException;
 import com.cicipin.userservice.common.model.User;
+import com.cicipin.userservice.common.model.UserRole;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +18,7 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -29,6 +34,34 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAll().stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public UserResponse createAdmin(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException("Email already registered");
+        }
+
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new DuplicateResourceException("Username already taken");
+        }
+
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+
+        User user = User.builder()
+                .username(request.getUsername())
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(hashedPassword)
+                .role(UserRole.ADMIN)
+                .isVerified(true)
+                .isActive(true)
+                .build();
+
+        userRepository.save(user);
+
+        return toResponse(user);
     }
 
     private UserResponse toResponse(User user) {

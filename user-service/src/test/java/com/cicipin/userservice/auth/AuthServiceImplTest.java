@@ -4,6 +4,7 @@ import com.cicipin.userservice.auth.dto.AuthResponse;
 import com.cicipin.userservice.auth.dto.LoginRequest;
 import com.cicipin.userservice.auth.dto.RegisterRequest;
 import com.cicipin.userservice.auth.otp.OtpService;
+import com.cicipin.userservice.common.exception.BadRequestException;
 import com.cicipin.userservice.common.exception.DuplicateResourceException;
 import com.cicipin.userservice.common.exception.ForbiddenException;
 import com.cicipin.userservice.common.exception.UnauthorizedException;
@@ -21,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -29,6 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import org.mockito.InOrder;
 
@@ -50,6 +53,9 @@ class AuthServiceImplTest {
 
     @Mock
     private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private ValueOperations<String, String> valueOperations;
 
     @Mock
     private JwtService jwtService;
@@ -74,8 +80,15 @@ class AuthServiceImplTest {
     @DisplayName("login()")
     class Login {
 
+        @BeforeEach
+        void setUp() {
+            lenient().when(redisTemplate.hasKey(anyString())).thenReturn(false);
+            lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            lenient().when(redisTemplate.delete(anyString())).thenReturn(true);
+        }
+
         @Test
-        @DisplayName("should return AuthResponse with JWT token when credentials are valid")
+        @DisplayName("should return AuthResponse with JWT token when credentials are valid (by email)")
         void shouldReturnAuthResponseWithToken_whenCredentialsAreValid() {
             UUID userId = UUID.randomUUID();
             User user = User.builder()
@@ -94,7 +107,7 @@ class AuthServiceImplTest {
             when(jwtService.generateAccessToken(user)).thenReturn("test-jwt-token");
 
             LoginRequest request = LoginRequest.builder()
-                    .email("john@example.com")
+                    .usernameOrEmail("john@example.com")
                     .password("password123")
                     .build();
 
@@ -106,6 +119,39 @@ class AuthServiceImplTest {
             assertThat(response.getAccessToken()).isEqualTo("test-jwt-token");
             assertThat(response.getTokenType()).isEqualTo("Bearer");
             verify(jwtService, times(1)).generateAccessToken(user);
+            verify(redisTemplate, times(2)).delete(anyString());
+        }
+
+        @Test
+        @DisplayName("should return AuthResponse with JWT token when credentials are valid (by username)")
+        void shouldReturnAuthResponseWithToken_whenLoginByUsername() {
+            UUID userId = UUID.randomUUID();
+            User user = User.builder()
+                    .id(userId)
+                    .username("johndoe")
+                    .name("John Doe")
+                    .email("john@example.com")
+                    .password("$2a$10$hashed")
+                    .role(UserRole.CUSTOMER)
+                    .isVerified(true)
+                    .isActive(true)
+                    .build();
+
+            when(userRepository.findByUsername("johndoe")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("password123", user.getPassword())).thenReturn(true);
+            when(jwtService.generateAccessToken(user)).thenReturn("test-jwt-token");
+
+            LoginRequest request = LoginRequest.builder()
+                    .usernameOrEmail("johndoe")
+                    .password("password123")
+                    .build();
+
+            AuthResponse response = authService.login(request);
+
+            assertThat(response).isNotNull();
+            assertThat(response.getId()).isEqualTo(userId);
+            assertThat(response.getAccessToken()).isEqualTo("test-jwt-token");
+            assertThat(response.getTokenType()).isEqualTo("Bearer");
         }
 
         @Test
@@ -114,13 +160,30 @@ class AuthServiceImplTest {
             when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
 
             LoginRequest request = LoginRequest.builder()
-                    .email("unknown@example.com")
+                    .usernameOrEmail("unknown@example.com")
                     .password("password123")
                     .build();
 
             assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(UnauthorizedException.class)
-                    .hasMessage("Invalid email or password");
+                    .hasMessage("User not registered");
+
+            verifyNoInteractions(jwtService);
+        }
+
+        @Test
+        @DisplayName("should throw UnauthorizedException when username is not found")
+        void shouldThrowException_whenUsernameNotFound() {
+            when(userRepository.findByUsername("unknownuser")).thenReturn(Optional.empty());
+
+            LoginRequest request = LoginRequest.builder()
+                    .usernameOrEmail("unknownuser")
+                    .password("password123")
+                    .build();
+
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(UnauthorizedException.class)
+                    .hasMessage("User not registered");
 
             verifyNoInteractions(jwtService);
         }
@@ -135,17 +198,37 @@ class AuthServiceImplTest {
 
             when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
             when(passwordEncoder.matches("wrongpassword", user.getPassword())).thenReturn(false);
+            when(valueOperations.increment(anyString())).thenReturn(1L);
 
             LoginRequest request = LoginRequest.builder()
-                    .email("john@example.com")
+                    .usernameOrEmail("john@example.com")
                     .password("wrongpassword")
                     .build();
 
             assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(UnauthorizedException.class)
-                    .hasMessage("Invalid email or password");
+                    .hasMessage("Password incorrect");
 
             verifyNoInteractions(jwtService);
+            verify(valueOperations).increment("login:attempts:john@example.com");
+        }
+
+        @Test
+        @DisplayName("should throw BadRequestException when login is blocked after too many attempts")
+        void shouldThrowException_whenLoginIsBlocked() {
+            when(redisTemplate.hasKey("login:blocked:john@example.com")).thenReturn(true);
+
+            LoginRequest request = LoginRequest.builder()
+                    .usernameOrEmail("john@example.com")
+                    .password("password123")
+                    .build();
+
+            assertThatThrownBy(() -> authService.login(request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Too many login attempts. Please try again in 10 minutes.");
+
+            verifyNoInteractions(jwtService);
+            verifyNoInteractions(userRepository);
         }
 
         @Test
@@ -162,7 +245,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches("password123", user.getPassword())).thenReturn(true);
 
             LoginRequest request = LoginRequest.builder()
-                    .email("john@example.com")
+                    .usernameOrEmail("john@example.com")
                     .password("password123")
                     .build();
 
@@ -187,7 +270,7 @@ class AuthServiceImplTest {
             when(passwordEncoder.matches("password123", user.getPassword())).thenReturn(true);
 
             LoginRequest request = LoginRequest.builder()
-                    .email("john@example.com")
+                    .usernameOrEmail("john@example.com")
                     .password("password123")
                     .build();
 
@@ -202,6 +285,26 @@ class AuthServiceImplTest {
     @Nested
     @DisplayName("register()")
     class Register {
+
+        @Test
+        @DisplayName("should throw BadRequestException when registering as ADMIN")
+        void shouldThrowException_whenRegisteringAsAdmin() {
+            RegisterRequest adminRequest = RegisterRequest.builder()
+                    .username("adminuser")
+                    .name("Admin User")
+                    .email("admin@example.com")
+                    .password("password123")
+                    .role(UserRole.ADMIN)
+                    .build();
+
+            assertThatThrownBy(() -> authService.register(adminRequest))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessage("Cannot register as ADMIN. Contact an existing admin to create an admin account.");
+
+            verifyNoInteractions(userRepository);
+            verifyNoInteractions(passwordEncoder);
+            verifyNoInteractions(otpService);
+        }
 
         @Test
         @DisplayName("should create user, generate OTP, and return AuthResponse when request is valid")
@@ -358,9 +461,11 @@ class AuthServiceImplTest {
         }
 
         @Test
-        @DisplayName("should work with all valid UserRole values")
+        @DisplayName("should work with all non-ADMIN UserRole values")
         void shouldWorkWithAllRoles() {
             for (UserRole role : UserRole.values()) {
+                if (role == UserRole.ADMIN) continue;
+
                 RegisterRequest request = RegisterRequest.builder()
                         .username("user_" + role.name().toLowerCase())
                         .name("User " + role)

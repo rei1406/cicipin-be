@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(err ->
                 fieldErrors.put(err.getField(), err.getDefaultMessage())
         );
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(ApiResponse.validationError(fieldErrors));
     }
 }
